@@ -8,25 +8,24 @@ Shader "Custom/Advanced Outline"
     }
     SubShader
     {
-       
-        CGPROGRAM
-        // Physically based Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Lambert
         
-        sampler2D _MainTex;
-   
+        CGPROGRAM
+        #pragma surface surf Lambert 
         struct Input
         {
             float2 uv_MainTex;
         };
 
-        void surf (Input IN, inout SurfaceOutputStandard o)
+        sampler2D _MainTex;
+
+        void surf (Input IN, inout SurfaceOutput o)
         {
             o.Albedo = tex2D(_MainTex, IN.uv_MainTex).rgb;
         }
         ENDCG
         
-        Pass{
+        Pass
+        {
             Cull Front
             
             CGPROGRAM
@@ -34,12 +33,42 @@ Shader "Custom/Advanced Outline"
             #pragma fragment frag
 
             #include "UnityCG.cginc"
-            
 
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                float3 normal :  NORMAL;
+            };
 
-            
-            ENDCG
+            struct v2f
+            {
+                float4 pos : SV_POSITION;
+                fixed4 color : COLOR;
+            };
+
+            float _Outline;
+            float4 _OutlineColor;
+
+            v2f vert(appdata v)
+            {
+                v2f o;
+                o.pos = UnityObjectToClipPos(v.vertex);
+                // Returns the normal according to world positions.
+                float3 norm  = normalize(mul ((float3x3)UNITY_MATRIX_IT_MV,v.normal));
+                
+                float2 offset = TransformViewToProjection(norm.xy);
+
+                o.pos.xy += offset * o.pos.z * _Outline;
+                o.color = _OutlineColor;
+                return o;
             }
+
+            fixed4 frag(v2f i) : SV_Target
+            {
+                return i.color;
+            }
+            ENDCG
+        }
     }
     FallBack "Diffuse"
 }
